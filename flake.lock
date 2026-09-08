@@ -1,0 +1,44 @@
+{
+  "nodes": {
+    "ldk-server-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1788808190,
+        "narHash": "sha256-smChm1s3752J0oGb7J0koRxkwyH96xTL3kCW3gXug1w=",
+        "owner": "lightningdevkit",
+        "repo": "ldk-server",
+        "rev": "a56d5a96397bb7c596f8833829508d8a66d66212",
+        "type": "github"
+      },
+      "original": {
+        "owner": "lightningdevkit",
+        "repo": "ldk-server",
+        "type": "github"
+      }
+    },
+    "nixpkgs": {
+      "locked": {
+        "lastModified": 1786862985,
+        "narHash": "sha256-FBJRXmbGXiSUDvYEbfLYRkckayyZ6SK1UEqhCrIZ2Cs=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "e5bdc4a41d4c072fe1e3787eaa0320a384741d44",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "root": {
+      "inputs": {
+        "ldk-server-src": "ldk-server-src",
+        "nixpkgs": "nixpkgs"
+      }
+    }
+  },
+  "root": "root",
+  "version": 7
+}
