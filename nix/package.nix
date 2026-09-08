@@ -15,11 +15,9 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   cargoLock = {
     lockFile = "${src}/Cargo.lock";
-    outputHashes = {
-      "bitcoin-payment-instructions-0.6.0" = "sha256-ZhnZopZgBIsoIKHxWmCfQDrpGpYLSedrC+Odj0Mbbo8=";
-      "ldk-node-0.8.0+git" = "sha256-YgdxkOdS1bvG7NWGKgzXiLqw0ciTqHMJghk/bvQEG3A=";
-      "lightning-0.3.0+git" = "sha256-o4NT1unDxzQ9TlPpkqsB1G7Qh9vV6ZvqPEKR+2smsvY=";
-    };
+    # Use the Git revisions in the selected source's lock file so users can
+    # update upstream without maintaining a second set of dependency hashes.
+    allowBuiltinFetchGit = true;
   };
 
   GIT_HASH = gitHash;

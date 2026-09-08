@@ -148,18 +148,54 @@ and `group` values must refer to users and groups in your NixOS configuration.
 
 ## Update upstream
 
-Update the source pin and run the checks:
+You can select an upstream commit or release tag in your system flake without
+waiting for this repository or Nixpkgs to update. Add a source input and make
+the module's source input follow it:
+
+```nix
+inputs.ldk-server-nixos.url = "github:benthecarman/ldk-server-nixos";
+inputs.ldk-server-src = {
+  url = "github:lightningdevkit/ldk-server/<commit-or-tag>";
+  flake = false;
+};
+inputs.ldk-server-nixos.inputs.ldk-server-src.follows = "ldk-server-src";
+```
+
+Replace `<commit-or-tag>` with a full commit hash or an existing release tag.
+The module uses that source automatically; no package override is needed.
+The binaries' version strings include the selected upstream commit.
+
+To follow upstream `main`, use `github:lightningdevkit/ldk-server/main` as
+the source URL. Then run these commands from your system flake directory:
+
+```bash
+nix flake update ldk-server-src
+sudo nixos-rebuild switch --flake .#my-host
+```
+
+Nix keeps the selected commit in your `flake.lock`; it only moves when you
+update it. To change a fixed commit or tag, edit the source URL first.
+Keep the updated lock file in version control.
+
+The build reads dependencies from the selected source's `Cargo.lock`, including
+Git revisions and registry checksums. There are no extra dependency hashes to
+maintain here. Nix can fetch Git dependencies during evaluation, so the first
+evaluation of a new revision needs network access. The initial repository
+downloads can be large; Nix caches them for later use. This uses Nixpkgs'
+[`allowBuiltinFetchGit` support](https://github.com/NixOS/nixpkgs/blob/master/doc/languages-frameworks/rust.section.md).
+
+A future upstream change to the build layout, required Rust version, or service
+configuration can still need packaging or configuration changes. If a new
+compiler is required, you can also override this flake's `nixpkgs` input in
+your system flake.
+
+To update this repository's default source pin, run these commands from its
+checkout:
 
 ```bash
 nix flake update ldk-server-src
 nix flake check --print-build-logs
 ```
-
-If upstream changes Git dependencies in `Cargo.lock`, update the corresponding
-`cargoLock.outputHashes` in `nix/package.nix`. Nix reports the expected hash
-when a source hash changes. New Git dependencies need an entry with their
-package name and version; use `lib.fakeHash` to obtain the expected hash.
-Review the upstream changes and commit the updated lock file and hashes together.
 
 To update Nixpkgs separately, run `nix flake update nixpkgs`.
 The module uses this flake's package by default. Set
