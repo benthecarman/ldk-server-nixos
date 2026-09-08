@@ -5,6 +5,7 @@
   stdenv,
   src,
   gitHash ? "unknown",
+  cargoHash ? "sha256-pkYdB7tgmRF1bVVrDBSWppjSO5TRW26+o03nqwzJ7hE=",
 }:
 
 rustPlatform.buildRustPackage (finalAttrs: {
@@ -13,12 +14,10 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   inherit src;
 
-  cargoLock = {
-    lockFile = "${src}/Cargo.lock";
-    # Use the Git revisions in the selected source's lock file so users can
-    # update upstream without maintaining a second set of dependency hashes.
-    allowBuiltinFetchGit = true;
-  };
+  # Fetch the locked dependencies as a hash-checked vendor tree before the
+  # offline build. Upstream overrides can supply a new cargoHash as needed.
+  inherit cargoHash;
+  cargoDepsName = "ldk-server";
 
   GIT_HASH = gitHash;
 

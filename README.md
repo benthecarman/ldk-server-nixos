@@ -173,27 +173,54 @@ inputs.ldk-server-nixos.inputs.ldk-server-src.follows = "ldk-server-src";
 ```
 
 Replace `<commit-or-tag>` with a full commit hash or an existing release tag.
-The module uses that source automatically; no package override is needed.
-The binaries' version strings include the selected upstream commit.
+The module uses that source automatically. The binaries' version strings
+include the selected upstream commit.
+
+Also override the package's `cargoHash` for your selected source. In your
+`nixosSystem.modules` list, with `ldk-server-nixos` in scope from the flake's
+`outputs` arguments:
+
+```nix
+modules = [
+  ldk-server-nixos.nixosModules.default
+  ({ lib, pkgs, ... }: {
+    services.ldk-server.package =
+      ldk-server-nixos.packages.${pkgs.stdenv.hostPlatform.system}.ldk-server.override {
+        cargoHash = lib.fakeHash; # Replace with the hash reported by Nix.
+      };
+  })
+  ./configuration.nix
+];
+```
 
 To follow upstream `main`, use `github:lightningdevkit/ldk-server/main` as
 the source URL. Then run these commands from your system flake directory:
 
 ```bash
 nix flake update ldk-server-src
+nix build --no-link .#nixosConfigurations.my-host.config.services.ldk-server.package.cargoDeps
+```
+
+The first build with `lib.fakeHash` is expected to fail with a hash mismatch.
+Replace `lib.fakeHash` with the quoted `sha256-...` value on the `got:` line,
+then build and apply your system:
+
+```bash
+nix build --no-link .#nixosConfigurations.my-host.config.system.build.toplevel
 sudo nixos-rebuild switch --flake .#my-host
 ```
 
 Nix keeps the selected commit in your `flake.lock`; it only moves when you
-update it. To change a fixed commit or tag, edit the source URL first.
-Keep the updated lock file in version control.
+update it. To change a fixed commit or tag, edit the source URL first. Use
+`lib.fakeHash` again to check the dependency hash when you change the source;
+otherwise Nix can reuse a cached vendor tree with the old hash. Keep the
+source pin, lock file, and dependency hash in version control.
 
-The build reads dependencies from the selected source's `Cargo.lock`, including
-Git revisions and registry checksums. There are no extra dependency hashes to
-maintain here. Nix can fetch Git dependencies during evaluation, so the first
-evaluation of a new revision needs network access. The initial repository
-downloads can be large; Nix caches them for later use. This uses Nixpkgs'
-[`allowBuiltinFetchGit` support](https://github.com/NixOS/nixpkgs/blob/master/doc/languages-frameworks/rust.section.md).
+The package uses Nixpkgs' `fetchCargoVendor` with one `cargoHash` for the
+locked dependencies. Downloads run in a separate build step, before offline
+compilation. Dependency fetching does not run during Nix evaluation. Git
+dependencies still need downloads, but the fetcher first tries a shallow
+fetch of each pinned revision. Nix caches the resulting vendor tree.
 
 A future upstream change to the build layout, required Rust version, or service
 configuration can still need packaging or configuration changes. If a new
@@ -205,8 +232,11 @@ checkout:
 
 ```bash
 nix flake update ldk-server-src
-nix flake check --print-build-logs
 ```
+
+Set the default `cargoHash` in `nix/package.nix` to `lib.fakeHash`, run
+`nix build --no-link .#ldk-server.cargoDeps`, and replace it with the reported
+hash. Then run `nix flake check --print-build-logs`.
 
 To update Nixpkgs separately, run `nix flake update nixpkgs`.
 The module uses this flake's package by default. Set
