@@ -90,10 +90,14 @@ let
 
         lightningPort = mkOption {
           type = types.nullOr types.port;
-          default = null;
+          default = 9735;
           description = ''
-            The Lightning port to open. This port must match the instance
-            configuration.
+            The default Lightning listener port and the port to open when
+            openFirewall is enabled. Generated configuration listens on
+            0.0.0.0 at this port unless settings.node.listening_addresses
+            is set. An explicit listener or configFile must use the same
+            port if openFirewall is enabled. Set null to omit the generated
+            listener default and the Lightning firewall rule.
           '';
         };
 
@@ -114,9 +118,9 @@ let
   generatedConfigs = lib.mapAttrs (
     name: instance:
     toml.generate "ldk-server-${name}.toml" (
-      lib.recursiveUpdate instance.settings {
-        storage.disk.dir_path = instance.dataDir;
-      }
+      lib.recursiveUpdate (lib.recursiveUpdate (lib.optionalAttrs (instance.lightningPort != null) {
+        node.listening_addresses = [ "0.0.0.0:${toString instance.lightningPort}" ];
+      }) instance.settings) { storage.disk.dir_path = instance.dataDir; }
     )
   ) enabledInstances;
 

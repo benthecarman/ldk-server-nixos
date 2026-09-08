@@ -45,13 +45,19 @@ in
           settings.node.network = "bitcoin";
           settings.storage.disk.dir_path = "/ignored-storage-path";
           openFirewall = true;
-          lightningPort = 9735;
         };
         signet = {
           enable = true;
           dataDir = "/var/lib/ldk-server-signet-test";
           settings.node.network = "signet";
+          lightningPort = 19735;
           grpcPort = 13536;
+        };
+        custom = {
+          enable = true;
+          lightningPort = 8735;
+          openFirewall = true;
+          settings.node.listening_addresses = [ "127.0.0.1:8735" ];
         };
         external = {
           enable = true;
@@ -70,6 +76,17 @@ in
     machine.wait_for_unit("ldk-server-mainnet.service")
     machine.wait_for_unit("ldk-server-signet.service")
     machine.wait_for_unit("ldk-server-external.service")
+    machine.wait_for_unit("ldk-server-custom.service")
+
+    import tomllib
+
+    for instance, data_dir, listener in [
+        ("mainnet", "/var/lib/ldk-server/mainnet", "0.0.0.0:9735"),
+        ("signet", "/var/lib/ldk-server-signet-test", "0.0.0.0:19735"),
+        ("custom", "/var/lib/ldk-server/custom", "127.0.0.1:8735"),
+    ]:
+        observed = tomllib.loads(machine.succeed(f"cat {data_dir}/observed-config.toml"))
+        assert observed["node"]["listening_addresses"] == [listener], instance
 
     machine.succeed(
       "test $(stat -c '%U:%G:%a' /var/lib/ldk-server/mainnet) = "
@@ -116,6 +133,8 @@ in
       "'cat /var/lib/ldk-server/mainnet/observed-secret'"
     )
     machine.succeed("iptables -S nixos-fw | grep -- '--dport 9735 -j nixos-fw-accept'")
+    machine.succeed("iptables -S nixos-fw | grep -- '--dport 8735 -j nixos-fw-accept'")
+    machine.fail("iptables -S nixos-fw | grep -- '--dport 19735 '")
     machine.fail("iptables -S nixos-fw | grep -- '--dport 13536 '")
     machine.fail("iptables -S nixos-fw | grep -- '--dport 29735 '")
 

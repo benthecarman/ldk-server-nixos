@@ -61,11 +61,9 @@ Add the flake to your system inputs:
             mainnet = {
               enable = true;
               openFirewall = true;
-              lightningPort = 9735;
               settings = {
                 node = {
                   network = "bitcoin";
-                  listening_addresses = [ "0.0.0.0:9735" ];
                   grpc_service_address = "127.0.0.1:3536";
                 };
                 esplora.server_url = "https://mempool.space/api";
@@ -103,6 +101,14 @@ stores data in `/var/lib/ldk-server/mainnet`.
 
 Use different Lightning and gRPC addresses for each instance. The module sets
 each data path even if the TOML file contains a different storage path.
+
+`lightningPort` defaults to `9735`. Generated configuration listens on
+`0.0.0.0` at that port; for example, `lightningPort = 8735;` changes the
+listener and the optional firewall rule together. Set
+`settings.node.listening_addresses` to choose specific bind addresses.
+Explicit listener settings or a complete `configFile` take precedence and
+must match `lightningPort` if you enable `openFirewall`. Set `lightningPort`
+to `null` to omit the generated listener default and Lightning firewall rule.
 
 The example exposes the Lightning port but keeps the gRPC API on loopback.
 Before you expose gRPC, configure its certificate and client access as
