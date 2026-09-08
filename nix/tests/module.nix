@@ -50,7 +50,7 @@ in
           enable = true;
           dataDir = "/var/lib/ldk-server-signet-test";
           settings.node.network = "signet";
-          lightningPort = 19735;
+          lightningPort = 39735;
           grpcPort = 13536;
         };
         custom = {
@@ -82,7 +82,7 @@ in
 
     for instance, data_dir, listener in [
         ("mainnet", "/var/lib/ldk-server/mainnet", "0.0.0.0:9735"),
-        ("signet", "/var/lib/ldk-server-signet-test", "0.0.0.0:19735"),
+        ("signet", "/var/lib/ldk-server-signet-test", "0.0.0.0:39735"),
         ("custom", "/var/lib/ldk-server/custom", "127.0.0.1:8735"),
     ]:
         observed = tomllib.loads(machine.succeed(f"cat {data_dir}/observed-config.toml"))
@@ -134,7 +134,7 @@ in
     )
     machine.succeed("iptables -S nixos-fw | grep -- '--dport 9735 -j nixos-fw-accept'")
     machine.succeed("iptables -S nixos-fw | grep -- '--dport 8735 -j nixos-fw-accept'")
-    machine.fail("iptables -S nixos-fw | grep -- '--dport 19735 '")
+    machine.fail("iptables -S nixos-fw | grep -- '--dport 39735 '")
     machine.fail("iptables -S nixos-fw | grep -- '--dport 13536 '")
     machine.fail("iptables -S nixos-fw | grep -- '--dport 29735 '")
 

@@ -76,12 +76,12 @@ Add the flake to your system inputs:
 
             signet = {
               enable = true;
-              lightningPort = 19735;
+              lightningPort = 39735;
               grpcPort = 13536;
               settings = {
                 node = {
                   network = "signet";
-                  listening_addresses = [ "127.0.0.1:19735" ];
+                  listening_addresses = [ "127.0.0.1:39735" ];
                   grpc_service_address = "127.0.0.1:13536";
                 };
                 esplora.server_url = "https://mempool.space/signet/api";
