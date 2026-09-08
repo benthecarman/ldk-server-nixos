@@ -52,12 +52,25 @@ in
           settings.node.network = "signet";
           lightningPort = 39735;
           grpcPort = 13536;
+          firewallInterfaces = [ "eth2" ];
         };
         custom = {
           enable = true;
           lightningPort = 8735;
           openFirewall = true;
+          firewallInterfaces = [
+            "eth1"
+            "eth2"
+          ];
           settings.node.listening_addresses = [ "127.0.0.1:8735" ];
+        };
+        api = {
+          enable = true;
+          lightningPort = null;
+          grpcPort = 43536;
+          settings.node.grpc_service_address = "127.0.0.1:43536";
+          openFirewall = true;
+          firewallInterfaces = [ "eth1" ];
         };
         external = {
           enable = true;
@@ -67,8 +80,16 @@ in
           enable = false;
           openFirewall = true;
           lightningPort = 29735;
+          firewallInterfaces = [ "eth2" ];
         };
       };
+    };
+
+    # Ordinary NixOS overrides must take precedence over module defaults.
+    systemd.services.ldk-server-custom.serviceConfig = {
+      TimeoutStartSec = "45s";
+      TimeoutStopSec = "2min";
+      ProtectHome = "read-only";
     };
   };
 
@@ -77,6 +98,7 @@ in
     machine.wait_for_unit("ldk-server-signet.service")
     machine.wait_for_unit("ldk-server-external.service")
     machine.wait_for_unit("ldk-server-custom.service")
+    machine.wait_for_unit("ldk-server-api.service")
 
     import tomllib
 
@@ -87,6 +109,19 @@ in
     ]:
         observed = tomllib.loads(machine.succeed(f"cat {data_dir}/observed-config.toml"))
         assert observed["node"]["listening_addresses"] == [listener], instance
+        assert observed["node"]["grpc_service_address"] == "127.0.0.1:3536", instance
+
+    api = tomllib.loads(machine.succeed("cat /var/lib/ldk-server/api/observed-config.toml"))
+    assert "listening_addresses" not in api["node"]
+    assert api["node"]["grpc_service_address"] == "127.0.0.1:43536"
+
+    for unit, start, stop in [
+        ("ldk-server-mainnet", "20min", "1h"),
+        ("ldk-server-custom", "45s", "2min"),
+    ]:
+        assert machine.succeed(f"systemctl show {unit} -p TimeoutStartUSec --value").strip() == start
+        assert machine.succeed(f"systemctl show {unit} -p TimeoutStopUSec --value").strip() == stop
+    assert machine.succeed("systemctl show ldk-server-custom -p ProtectHome --value").strip() == "read-only"
 
     machine.succeed(
       "test $(stat -c '%U:%G:%a' /var/lib/ldk-server/mainnet) = "
@@ -115,6 +150,7 @@ in
     )
 
     machine.succeed("grep -Fx test-only-secret /var/lib/ldk-server/mainnet/observed-secret")
+    machine.succeed("test $(stat -c %a /var/lib/ldk-server/mainnet/observed-secret) = 600")
     machine.succeed("grep -Fx unset /var/lib/ldk-server-signet-test/observed-secret")
     machine.succeed(
       "cmp /etc/ldk-server-external.toml "
@@ -133,7 +169,13 @@ in
       "'cat /var/lib/ldk-server/mainnet/observed-secret'"
     )
     machine.succeed("iptables -S nixos-fw | grep -- '--dport 9735 -j nixos-fw-accept'")
-    machine.succeed("iptables -S nixos-fw | grep -- '--dport 8735 -j nixos-fw-accept'")
+    rules = machine.succeed("iptables -S nixos-fw").splitlines()
+    scoped = [line for line in rules if "--dport 8735 " in line]
+    assert len(scoped) == 2, scoped
+    assert any("-i eth1 " in line for line in scoped), scoped
+    assert any("-i eth2 " in line for line in scoped), scoped
+    api_rules = [line for line in rules if "--dport 43536 " in line]
+    assert len(api_rules) == 1 and "-i eth1 " in api_rules[0], api_rules
     machine.fail("iptables -S nixos-fw | grep -- '--dport 39735 '")
     machine.fail("iptables -S nixos-fw | grep -- '--dport 13536 '")
     machine.fail("iptables -S nixos-fw | grep -- '--dport 29735 '")

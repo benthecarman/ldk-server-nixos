@@ -67,6 +67,12 @@
               ldkServerModule = self.nixosModules.ldk-server;
             }
           );
+          nixos-service = pkgs.testers.runNixOSTest (
+            import ./nix/tests/service.nix {
+              inherit pkgs;
+              ldkServerModule = self.nixosModules.ldk-server;
+            }
+          );
         }
       );
 

@@ -85,7 +85,22 @@ let
         openFirewall = mkOption {
           type = types.bool;
           default = false;
-          description = "Open the selected ports for this instance.";
+          description = "Open the selected ports on firewallInterfaces for this instance.";
+        };
+
+        firewallInterfaces = mkOption {
+          type = types.listOf (
+            types.addCheck types.str (interface: interface != "" && interface != "default")
+          );
+          default = [ ];
+          example = [ "wg0" ];
+          description = ''
+            Interfaces on which to open the selected ports when openFirewall
+            is enabled. An empty list opens them on all interfaces. This
+            option does not change the server's listening addresses.
+            Names must be nonempty and cannot be the NixOS-reserved name
+            "default".
+          '';
         };
 
         lightningPort = mkOption {
@@ -117,10 +132,20 @@ let
 
   generatedConfigs = lib.mapAttrs (
     name: instance:
+    let
+      defaults = {
+        node = {
+          grpc_service_address = "127.0.0.1:3536";
+        }
+        // lib.optionalAttrs (instance.lightningPort != null) {
+          listening_addresses = [ "0.0.0.0:${toString instance.lightningPort}" ];
+        };
+      };
+    in
     toml.generate "ldk-server-${name}.toml" (
-      lib.recursiveUpdate (lib.recursiveUpdate (lib.optionalAttrs (instance.lightningPort != null) {
-        node.listening_addresses = [ "0.0.0.0:${toString instance.lightningPort}" ];
-      }) instance.settings) { storage.disk.dir_path = instance.dataDir; }
+      lib.recursiveUpdate (lib.recursiveUpdate defaults instance.settings) {
+        storage.disk.dir_path = instance.dataDir;
+      }
     )
   ) enabledInstances;
 
@@ -242,32 +267,57 @@ in
           Restart = "on-failure";
           RestartSec = 10;
 
-          NoNewPrivileges = true;
-          PrivateDevices = true;
-          PrivateTmp = true;
-          ProtectControlGroups = true;
-          ProtectHome = true;
-          ProtectKernelModules = true;
-          ProtectKernelTunables = true;
-          ProtectSystem = "strict";
+          # Allow initial synchronization and graceful state persistence.
+          # Hosts can change these defaults through systemd.services.
+          TimeoutStartSec = lib.mkDefault "20min";
+          TimeoutStopSec = lib.mkDefault "1h";
+
+          UMask = lib.mkDefault "0077";
+          AmbientCapabilities = lib.mkDefault [ ];
+          CapabilityBoundingSet = lib.mkDefault [ ];
+          LockPersonality = lib.mkDefault true;
+          NoNewPrivileges = lib.mkDefault true;
+          PrivateDevices = lib.mkDefault true;
+          PrivateTmp = lib.mkDefault true;
+          ProtectClock = lib.mkDefault true;
+          ProtectControlGroups = lib.mkDefault true;
+          ProtectHome = lib.mkDefault true;
+          ProtectHostname = lib.mkDefault true;
+          ProtectKernelLogs = lib.mkDefault true;
+          ProtectKernelModules = lib.mkDefault true;
+          ProtectKernelTunables = lib.mkDefault true;
+          ProtectSystem = lib.mkDefault "strict";
           ReadWritePaths = [ instance.dataDir ];
-          RestrictAddressFamilies = [
+          RestrictAddressFamilies = lib.mkDefault [
             "AF_INET"
             "AF_INET6"
             "AF_UNIX"
           ];
+          RestrictNamespaces = lib.mkDefault true;
+          RestrictRealtime = lib.mkDefault true;
+          RestrictSUIDSGID = lib.mkDefault true;
         };
       }
     ) enabledInstances;
 
-    networking.firewall.allowedTCPPorts = lib.concatMap (
-      instance:
-      lib.optionals instance.openFirewall (
-        lib.filter (port: port != null) [
-          instance.lightningPort
-          instance.grpcPort
-        ]
-      )
-    ) (lib.attrValues enabledInstances);
+    networking.firewall = lib.mkMerge (
+      lib.mapAttrsToList (
+        _: instance:
+        let
+          ports = lib.filter (port: port != null) [
+            instance.lightningPort
+            instance.grpcPort
+          ];
+        in
+        if instance.firewallInterfaces == [ ] then
+          { allowedTCPPorts = ports; }
+        else
+          {
+            interfaces = lib.genAttrs instance.firewallInterfaces (_: {
+              allowedTCPPorts = ports;
+            });
+          }
+      ) (lib.filterAttrs (_: instance: instance.openFirewall) enabledInstances)
+    );
   };
 }

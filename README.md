@@ -152,6 +152,11 @@ The service user must be able to read this file. Systemd reads
 `environmentFiles`, so those files can remain owned by root. Custom `user`
 and `group` values must refer to users and groups in your NixOS configuration.
 
+See [NixOS integration](docs/integration.md) for interface-scoped firewall
+rules, local service dependencies, timeout overrides, and runtime secrets
+with SOPS or another provider. The module does not depend on a particular
+VPN, Bitcoin Core service name, or secret manager.
+
 ## Update upstream
 
 You can select an upstream commit or release tag in your system flake without
@@ -216,10 +221,13 @@ nix flake check --print-build-logs
 ```
 
 The build check compiles the server and CLI, runs their Rust unit tests, and
-installs Bash, Fish, and Zsh completions. The Linux VM test uses a test daemon
+installs Bash, Fish, and Zsh completions. The module VM test uses a test daemon
 to check systemd startup, separate users and data directories, generated and
-external configuration, environment files, firewall rules, and independent
-service shutdown. It does not test Lightning payments or chain synchronization.
+external configuration, environment files, firewall rules, timeout overrides,
+and independent service shutdown. A second VM test starts the real server
+with a local regtest Bitcoin Core backend, checks API access and node identity
+across a restart, and checks allowed and blocked network interfaces.
+These tests do not test Lightning payments or public-network synchronization.
 Linux VM tests need KVM. CI runs the build and VM checks on x86_64 Linux.
 
 ## License
