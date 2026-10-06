@@ -1,11 +1,13 @@
 {
   installShellFiles,
   lib,
+  openssl,
+  pkg-config,
   rustPlatform,
   stdenv,
   src,
   gitHash ? "unknown",
-  cargoHash ? "sha256-CfotODjBFsILc32m9sJHg+fsEubgnZZdoZ7BLOHpycE=",
+  cargoHash ? "sha256-INdeCdR4NkhDCe+p3wDtOZK4JGq0J8eZK/KArxAsm+c=",
 }:
 
 rustPlatform.buildRustPackage (finalAttrs: {
@@ -21,7 +23,13 @@ rustPlatform.buildRustPackage (finalAttrs: {
 
   GIT_HASH = gitHash;
 
-  nativeBuildInputs = [ installShellFiles ];
+  nativeBuildInputs = [
+    installShellFiles
+    pkg-config
+  ];
+
+  # ldk-node's PostgreSQL storage backend links native-tls.
+  buildInputs = [ openssl ];
 
   cargoBuildFlags = [
     "-p"

@@ -84,7 +84,7 @@
     cli = (
         f"ldk-server-cli --base-url 127.0.0.1:3536 "
         f"--tls-cert {base}/tls.crt "
-        f"--api-key $(od -An -v -tx1 {base}/regtest/api_key | tr -d ' \\n') "
+        f"--macaroon $(cat {base}/regtest/macaroons/admin.macaroon) "
         "get-node-info"
     )
     info = json.loads(machine.succeed(cli))
