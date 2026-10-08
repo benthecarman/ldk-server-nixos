@@ -3,11 +3,11 @@
     "ldk-server-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1790707520,
-        "narHash": "sha256-K0JiidTtJ7TO73FNYEK8/XKjKVBFcD+aHM7JCv0jgFc=",
+        "lastModified": 1791485268,
+        "narHash": "sha256-viNu5WVdZIj7cPJucFBLv9C9jGTZUo/OVY0e6OHI7Mo=",
         "owner": "lightningdevkit",
         "repo": "ldk-server",
-        "rev": "08316de8795a759eee08dc3873d32f980fbd0fe0",
+        "rev": "21a903ccb89496285c58a55ffdce42a9f0353a05",
         "type": "github"
       },
       "original": {
