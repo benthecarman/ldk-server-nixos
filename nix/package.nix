@@ -7,7 +7,7 @@
   stdenv,
   src,
   gitHash ? "unknown",
-  cargoHash ? "sha256-rkPiojKba+0DlYa5RFKg2eUz7/p9fctu3Eu9JKukGWY=",
+  cargoHash ? "sha256-5xryMmbEY/7ZS26eStyY6S4H4HVZzSQKOOcpaOjT3is=",
 }:
 
 rustPlatform.buildRustPackage (finalAttrs: {
