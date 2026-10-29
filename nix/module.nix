@@ -124,6 +124,29 @@ let
             configuration.
           '';
         };
+
+        mallocArenaMax = mkOption {
+          type = types.nullOr types.ints.positive;
+          default = 2;
+          description = ''
+            The MALLOC_ARENA_MAX value for the daemon. glibc gives each busy
+            thread its own allocation arena and keeps freed memory in it, so
+            the resident size can grow to several times the live heap. A
+            small limit keeps the resident size close to the live heap. Set
+            null to use the glibc default.
+          '';
+        };
+
+        workerThreads = mkOption {
+          type = types.nullOr types.ints.positive;
+          default = null;
+          example = 4;
+          description = ''
+            The number of Tokio worker threads (TOKIO_WORKER_THREADS). Tokio
+            starts one worker for each CPU core by default. Fewer workers use
+            less memory. Set null to use the Tokio default.
+          '';
+        };
       };
     }
   );
@@ -251,6 +274,14 @@ in
         wantedBy = [ "multi-user.target" ];
         wants = [ "network-online.target" ];
         after = [ "network-online.target" ];
+
+        environment =
+          lib.optionalAttrs (instance.mallocArenaMax != null) {
+            MALLOC_ARENA_MAX = toString instance.mallocArenaMax;
+          }
+          // lib.optionalAttrs (instance.workerThreads != null) {
+            TOKIO_WORKER_THREADS = toString instance.workerThreads;
+          };
 
         serviceConfig = {
           Type = "notify";

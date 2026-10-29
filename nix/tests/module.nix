@@ -53,6 +53,8 @@ in
           lightningPort = 39735;
           grpcPort = 13536;
           firewallInterfaces = [ "eth2" ];
+          mallocArenaMax = null;
+          workerThreads = 4;
         };
         custom = {
           enable = true;
@@ -122,6 +124,13 @@ in
         assert machine.succeed(f"systemctl show {unit} -p TimeoutStartUSec --value").strip() == start
         assert machine.succeed(f"systemctl show {unit} -p TimeoutStopUSec --value").strip() == stop
     assert machine.succeed("systemctl show ldk-server-custom -p ProtectHome --value").strip() == "read-only"
+
+    mainnet_env = machine.succeed("systemctl show ldk-server-mainnet -p Environment --value").split()
+    assert "MALLOC_ARENA_MAX=2" in mainnet_env, mainnet_env
+    assert not any(v.startswith("TOKIO_WORKER_THREADS=") for v in mainnet_env), mainnet_env
+    signet_env = machine.succeed("systemctl show ldk-server-signet -p Environment --value").split()
+    assert "TOKIO_WORKER_THREADS=4" in signet_env, signet_env
+    assert not any(v.startswith("MALLOC_ARENA_MAX=") for v in signet_env), signet_env
 
     machine.succeed(
       "test $(stat -c '%U:%G:%a' /var/lib/ldk-server/mainnet) = "

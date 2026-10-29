@@ -114,6 +114,25 @@ Use a larger startup timeout for slow synchronization or storage. Shutdown
 needs time to persist node state. If a custom configuration writes outside
 `dataDir`, add only those directories to `serviceConfig.ReadWritePaths`.
 
+## Memory use
+
+The module sets `MALLOC_ARENA_MAX=2` for each instance. glibc gives each
+busy thread its own allocation arena and keeps freed memory in it. Without a
+limit, the daemon's resident size can grow to several times its live heap.
+Set `mallocArenaMax` to another value, or to `null` for the glibc default.
+
+Tokio starts one worker thread for each CPU core. On a host with many cores,
+set `workerThreads` to use fewer workers and less memory:
+
+```nix
+services.ldk-server.instances.mainnet = {
+  mallocArenaMax = 2;
+  workerThreads = 4;
+};
+```
+
+Variables in `environmentFiles` override these values.
+
 ## Runtime secrets
 
 `settings` is stored in the Nix store and must not contain secrets.

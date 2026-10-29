@@ -153,8 +153,8 @@ The service user must be able to read this file. Systemd reads
 and `group` values must refer to users and groups in your NixOS configuration.
 
 See [NixOS integration](docs/integration.md) for interface-scoped firewall
-rules, local service dependencies, timeout overrides, and runtime secrets
-with SOPS or another provider. The module does not depend on a particular
+rules, local service dependencies, timeout overrides, memory settings, and
+runtime secrets with SOPS or another provider. The module does not depend on a particular
 VPN, Bitcoin Core service name, or secret manager.
 
 ## Update upstream
